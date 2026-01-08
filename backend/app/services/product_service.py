@@ -13,10 +13,10 @@ class ProductService:
 
     def get_all_products(self) -> ProductListResponse:
         products = self.product_repository.get_all()
-        products_response = [ProductResponse.model_validate(prod) for prod in products]
-        return ProductListResponse(
-            products=products_response, total=len(products_response)
-        )
+        # Превращаем модели базы данных в список Pydantic-моделей
+        products_list = [ProductResponse.model_validate(prod) for prod in products]
+        # Возвращаем ОДНУ модель ProductListResponse с правильными именованными аргументами
+        return ProductListResponse(products=products_list, total=len(products_list))
 
     def get_product_by_id(self, product_id: int) -> ProductResponse:
         product = self.product_repository.get_by_id(product_id)
@@ -34,12 +34,10 @@ class ProductService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Category with id {category_id} not found",
             )
-
-        products = self.product_repository.get_by_category(category_id)
-        products_response = [ProductResponse.model_validate(prod) for prod in products]
-        return ProductListResponse(
-            products=products_response, total=len(products_response)
-        )
+        products = self.repository.get_by_category(category_id)
+        # Аналогично исправляем здесь
+        products_list = [ProductResponse.model_validate(prod) for prod in products]
+        return ProductListResponse(products=products_list, total=len(products_list))
 
     def create_product(self, product_data: ProductCreate) -> ProductResponse:
         category = self.category_repository.get_by_id(product_data.category_id)
