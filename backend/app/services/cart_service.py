@@ -9,7 +9,9 @@ class CartService:
     def __init__(self, db: Session):
         self.repository = ProductRepository(db)
 
-    def add_to_cart(self, cart_data: Dict[int, int], item: CartItemCreate) -> Dict[int, int]:
+    def add_to_cart(
+        self, cart_data: Dict[int, int], item: CartItemCreate
+    ) -> Dict[int, int]:
         product = self.repository.get_by_id(item.product_id)
         if not product:
             raise HTTPException(
@@ -22,7 +24,9 @@ class CartService:
             cart_data[item.product_id] = item.quantity
         return cart_data
 
-    def update_cart_item(self, cart_data: Dict[int, int], item: CartItemUpdate) -> Dict[int, int]:
+    def update_cart_item(
+        self, cart_data: Dict[int, int], item: CartItemUpdate
+    ) -> Dict[int, int]:
         if item.product_id not in cart_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -34,7 +38,9 @@ class CartService:
             cart_data[item.product_id] = item.quantity
         return cart_data
 
-    def remove_from_cart(self, cart_data: Dict[int, int], product_id: int) -> Dict[int, int]:
+    def remove_from_cart(
+        self, cart_data: Dict[int, int], product_id: int
+    ) -> Dict[int, int]:
         if product_id not in cart_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -44,11 +50,13 @@ class CartService:
         return cart_data
 
     def get_cart_details(self, cart_data: Dict[int, int]) -> CartResponse:
+        # Исправлено: добавлены все три обязательных поля для пустой корзины
         if not cart_data:
-            return CartResponse(items=[], total_price=0.0)
+            return CartResponse(items=[], total_quantity=0, total_price=0.0)
 
         product_ids = list(cart_data.keys())
-        products = self.product_repository.get_multiple_by_ids(product_ids)
+        # Исправлено: используем self.repository вместо self.product_repository
+        products = self.repository.get_multiple_by_ids(product_ids)
         products_dict = {product.id: product for product in products}
 
         cart_items = []
@@ -60,11 +68,21 @@ class CartService:
                 product = products_dict[product_id]
                 subtotal = product.price * quantity
 
-                cart_item = CartItem(product_id=product.id, name=product.name,
-                                     price=product.price, quantity=quantity, subtotal=subtotal,
-                                     image_url=product.image_url)
+                cart_item = CartItem(
+                    product_id=product.id,
+                    name=product.name,
+                    price=product.price,
+                    quantity=quantity,
+                    subtotal=subtotal,
+                    image_url=product.image_url,
+                )
                 cart_items.append(cart_item)
                 total_price += subtotal
                 total_items += quantity
 
-        return CartResponse(items=cart_items, total=round(total_price), item_count=total_items)
+        # Исправлено: передаем имена полей в строгом соответствии со схемой CartResponse
+        return CartResponse(
+            items=cart_items,
+            total_price=round(total_price, 2),
+            total_quantity=total_items,
+        )
